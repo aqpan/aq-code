@@ -1,0 +1,227 @@
+---
+title: 'STA 141A Spring 2020: Homework 1'
+author: 'anqi pan'
+date: "4/15/2020"
+output:
+  html_document:
+    number_sections: yes
+---
+
+The assignment has to be done in an [R Markdown](https://rmarkdown.rstudio.com) document. The assignment has to be submitted electronically on Canvas until the deadline of April 15, 2020 at 6:00 PM by uploading two files:
+
+1. an HTML or PDF file;
+2. the Rmd source file.
+
+It is possible to upload two files on Canvas. Late submissions will not be accepted.
+
+Each answer has to be based on `R` code that shows how the result was obtained. `R` code has to answer the question or solve the task. For example, if you are asked to find the largest entry of a vector, `R` code has to return the largest element of the vector. If `R` code just prints all values of the vector and you determine by hand which element is the largest, this will not be accepted as an answer. No points will be given for answers that are not based on `R` code. 
+
+There are many possible ways to write `R` code that is needed to answer the questions or do the tasks, but for some of the questions or tasks you might have to use something that has not been discussed during the lectures or the discussion sessions. You will have to come up with a solution on your own. This is a very important part of learning (if not the most important part of learning). Try to understand what you need to do to complete the task or answer the question and feel free to search the Internet for possible solutions and discuss possible solutions with other students. It is perfectly fine to ask what kind of an approach or a function other students use. However, you are not allowed to share your code or your answers with other students. Everyone has to write the code, do the tasks and answer the questions on their own. To put it simply, collaborate but do not plagiarize.
+
+The total number of points of this assignment is 30.
+
+Good luck!
+
+# Vectors and simulation
+Suppose that we have:
+
++ four types of animals: `cat`, `dog`, `cow`, `squirrel`;
++ four possible colors: `white`, `black`, `brown`, `red`;
++ five possible attributes: `big`, `small`, `angry`, `angry`, `finicky`.
+
+a. Generate random samples with replacement of size `100` from each of the types. Call the resulting vectors of character strings as: `Animal`, `Color`, `Attribute` (1 point). 
+```{r Va, warning=F, message=F}
+set.seed(100)
+Animal <- sample(c("cat", "dog", "cow", "squirrel"), 100, replace = T)
+Color <- sample(c("white", "black", "brown", "red"), 100, replace = T)
+Attribute <- sample(c("big", "small", "angry", "angry", "finicky"), 100, replace = T)
+```
+
+b. Compute how many animals in the sample are cats or dogs (1 point).
+```{r Vb, warning=F, message=F}
+result2 <- data.frame(table(Animal))
+knitr::kable(result2, align = "c")
+```
+  
+  From the result above, we have `r result2[1, 2]` cats and `r result2[3, 2]` dogs.
+  
+c. Write `R` code to combine the results to produce phrases (character strings) describing the animals as in this example: `big white dog` (2 points).
+```{r Vc, warning=F, message=F}
+result3 <- data.frame(Animal = Animal, Color = Color, Attribute = Attribute)
+result3$desc <- paste(result3$Attribute, result3$Color, result3$Animal, sep = " ")
+knitr::kable(head(result3), align = "c")
+```
+
+d. Create a contingency table between `Animal` and `Attribute` (1 point).
+```{r Vd, warning=F, message=F}
+result4 <- data.frame(table(result3$Animal, result3$Attribute))
+knitr::kable(head(result4), align = "c")
+```
+
+# Matrices
+Consider the following system of linear equations
+\begin{align*}
+x_1+2x_2+3x_3+4x_4+5x_5&=7,\\
+2x_1+x_2+2x_3+3x_4+4x_5&=-1,\\
+3x_1+2x_2+x_3+2x_4+3x_5&=-3,\\
+4x_1+3x_2+2x_3+x_4+2x_5&=5,\\
+5x_1+4x_2+3x_3+2x_4+x_5&=17.
+\end{align*}
+
+a. Create the matrix `A` and the vector `y` corresponding to the matrix equation $Ax=y$, where $A\in\mathbb R^{5\times 5}$ and $x,y\in\mathbb R^5$ (1 point).
+```{r Ma, warning=F, message=F}
+A <- matrix(c(1, 2, 3, 4, 5, 2, 1, 2, 3, 1, 3, 2, 1, 2, 3,
+              4, 3, 2, 1, 2, 5, 4, 3, 2, 1), byrow = F, nrow = 5)
+y <- matrix(c(7, -1, -3, 5, 17), byrow = T, nrow = 5)
+```
+
+b. Determine if the matrix `A` is invertible (2 points).
+  
+  As the det of A is `r det(A)` which is not eauql 0, thus the matrix `A` is invertible.
+```{r Mb, warning=F, message=F}
+det(A)
+```
+
+c. Find the solution of the system of linear equations (2 points).
+  
+  The solution of the system of linear equations is as bellows.
+```{r M3, warning=F, message=F}
+knitr::kable(solve(A, y), align = "c")
+```
+
+d. Verify that your solution is correct (1 point).
+  
+  We use the result above to multiply with A, it shows same answers which is eauql y. The solution is right.
+```{r M4, warning=F, message=F}
+knitr::kable(A %*% matrix(solve(A, y), byrow = F, nrow = 5), align = "c")
+```
+
+# Data exploration
+The task is to explore the US census population estimates by county for 2015 from the package `usmap` (load the data frame from `countypop.RData`). The data frame has `3142` rows and `4` variables: `fips` is the 5-digit FIPS code corresponding to the county; `abbr` is the 2-letter state abbreviation; `county` is the full county name; `pop_2015` is the 2015 population estimate (in number of people) for the corresponding county. Each row of the data frame represents a different county or a county equivalent. For the sake of simplicity, when we say a county, that also includes a county equivalent and when we say a state, that also includes the District of Columbia. Answer the following questions.
+
+```{r D, warning=F, message=F}
+load("countypop.RData")
+```
+
+a. How many unique 2-letter state abbreviations are there (1 point)?
+  
+  We have `r length(unique(countypop$abbr))` unique 2-letter state abbreviations in the data.
+```{r Da, warning=F, message=F}
+length(unique(countypop$abbr))
+```
+b. What is the total number of counties in the US (1 point)?
+  
+  The total number of counties in the US is `r length(countypop$county)`.
+```{r Db, warning=F, message=F}
+length(countypop$county)
+```
+
+c. How many unique county names are there (1 point)?
+  
+  The number of unique country names is `r length(unique(countypop$county))`.
+```{r Dc, warning=F, message=F}
+length(unique(countypop$county))
+```
+
+d. What are the top 10 most common county names (2 points)?
+  
+  The top 10 most common county names are as bellows.
+```{r Dd, warning=F, message=F}
+library(dplyr)
+number <- countypop %>%
+  group_by(county) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+knitr::kable(head(number, 10), align = "c")
+```
+
+e. Which state has the largest number of counties? Which state has the smallest number of counties (1 points)?
+```{r De, warning=F, message=F}
+library(dplyr)
+state <- countypop %>%
+  group_by(abbr) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+c(as.vector(unlist(head(state, 1)[1, 1])), as.vector(unlist(tail(state, 1)[1, 1])))
+```
+  
+  The `r as.vector(unlist(head(state, 1)[1, 1]))`  has the largest number of counties. The `r as.vector(unlist(tail(state, 1)[1, 1]))`has the smallest number of counties.
+
+f. What is the average population of a county in the US (1 point)?
+  
+  The average population of a county in the US is `r round(sum(countypop$pop_2015) / length(unique(countypop$county)), 0)`.
+```{r Df, warning=F, message=F}
+round(sum(countypop$pop_2015) / length(unique(countypop$county)), 0)
+```
+
+g. Which state has the largest county in terms of population? How many people live in the largest county in terms of population (2 points)?
+```{r Dg, warning=F, message=F}
+library(dplyr)
+coupop <- countypop %>%
+  arrange(desc(pop_2015))
+knitr::kable(head(coupop, 1), align = "c")
+```
+  
+  The `r as.vector(unlist(coupop[1, 2]))` has the largest county in terms of population. The people live in the largest county in terms of population is `r as.vector(unlist(coupop[1, 4]))`.
+
+h. What is the largest county in terms of population of each of the states (2 points)?
+  
+  The largest county in terms of population of each of the states is as bellows.
+```{r Dh, warning=F, message=F}
+library(dplyr)
+stapop <- countypop %>%
+  select(abbr, county, pop_2015) %>%
+  group_by(abbr) %>%
+  mutate(my_ranks = order(order(pop_2015, decreasing = TRUE))) %>%
+  filter(my_ranks == 1)
+knitr::kable(stapop[-4], align = "c")
+```
+    
+i. What is the average population of the 100 largest counties in the US (2 points)?
+```{r Di, warning=F, message=F}
+library(dplyr)
+coupopavg <- countypop %>%
+  group_by(county) %>%
+  summarise(count = sum(pop_2015)) %>%
+  arrange(desc(count)) %>%
+  top_n(100) %>%
+  summarise(value = mean(count))
+as.vector(unlist(coupopavg))
+```
+  
+  The average population of the 100 largest counties in the US is `r as.vector(unlist(coupopavg))`
+
+j. How many people live in each of the states (2 points)?
+  
+  The people live in each of the states are as bellows.
+```{r Dj, warning=F, message=F}
+library(dplyr)
+stapop.j <- countypop %>%
+  select(abbr, pop_2015) %>%
+  group_by(abbr) %>%
+  summarise(count = sum(pop_2015))
+knitr::kable(stapop.j, align = "c")
+```
+
+k. What is the average population of a county in California (2 points)?
+```{r Dk, warning=F, message=F}
+library(dplyr)
+library(tidyr)
+pop.k <- countypop %>%
+  filter(abbr == "CA") %>%
+  summarise(popavg = round(sum(pop_2015) / n(), 0) )
+as.vector(unlist(pop.k))
+```
+  
+  The average population of a county in California is `r as.vector(unlist(pop.k))`
+
+l. What is the average population of a county in each of the states (2 points)?
+  
+   The average population of a county in each of the states is bellows.
+```{r Dl, warning=F, message=F}
+pop.l <- countypop %>%
+  select(abbr, county, pop_2015) %>%
+  group_by(abbr) %>%
+  summarise(popavg = round(sum(pop_2015) / n()))
+knitr::kable(pop.l, align = "c")
+```

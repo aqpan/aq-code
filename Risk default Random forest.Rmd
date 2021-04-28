@@ -1,0 +1,239 @@
+---
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **Random forest**
+
+## i
+  
+  Load data.
+```{r, warning=F, message=F}
+data <- read.csv("./data/LoanActivity.csv")
+```
+ 
+ The features (columns) that I will exclude from modeling are as bellows:
+ 
+ · id. This feature is a unique LC assigned ID for the loan listing, it's just an index which has no much more meaning.
+ · member_id. This feature has null values.
+ · sub_grade. This features is same as grade varoable.
+ · emp_title. This features just describes the emloyee job title, and the variable emp_length is more useful than that.
+ · issue_d. This features is about date.
+ · pymnt_plan. This features only has one value, it's same for every one.
+ · desc. This features just describes the agreement about the applier with the bank.
+ · title. This features is a title about the agreement about the applier with the bank.
+ · zip_code. This features is an zipcode, and the variable addr_state is same as that.
+ · earliest_cr_line. This features is about date.
+ · last_pymnt_d. This features is about date.
+ · next_pymnt_d. This features is about date.
+ · last_credit_pull_d. This features is about date.
+ · policy_code. This features only has one value, it's same for every one.
+ · application_type. This features only has one value, it's same for every one.
+ · annual_inc_joint. This feature has null values.
+ · dti_joint. This feature has null values.
+ · verification_status_joint. This feature has null values.
+ · open_acc_6m. This feature has null values.
+ · open_act_il. This feature has null values.
+ · open_il_12m. This feature has null values.
+ · open_il_24m. This feature has null values.
+ · mths_since_rcnt_il. This feature has null values.
+ · total_bal_il. This feature has null values.
+ · il_util. This feature has null values.
+ · open_rv_12m. This feature has null values.
+ · open_rv_24m. This feature has null values.
+ · max_bal_bc. This feature has null values.
+ · all_util. This feature has null values.
+ · inq_fi. This feature has null values.
+ · total_cu_tl. This feature has null values.
+ · inq_last_12m. This feature has null values.
+ · revol_bal_joint. This feature has null values.
+ · sec_app_fico_range_low. This feature has null values.
+ · sec_app_fico_range_high. This feature has null values.
+ · sec_app_earliest_cr_line. This feature has null values.
+ · sec_app_inq_last_6mths. This feature has null values.
+ · sec_app_mort_acc. This feature has null values.
+ · sec_app_open_acc. This feature has null values.
+ · sec_app_revol_util. This feature has null values.
+ · sec_app_open_act_il. This feature has null values.
+ · sec_app_num_rev_accts. This feature has null values.
+ · sec_app_chargeoff_within_12_mths. This feature has null values.
+ · sec_app_collections_12_mths_ex_med. This feature has null values.
+ · sec_app_mths_since_last_major_derog. This feature has null values.
+ · hardship_flag. This features only has one value, it's same for every one.
+ · hardship_type. Most values of this feature has null values.
+ · hardship_reason. Most values of this feature has null values.
+ · hardship_status. Most values of this feature has null values.
+ · deferral_term. Most values of this feature has null values.
+ · hardship_amount. Most values of this feature has null values.
+ · hardship_start_date. This features is about date.
+ · hardship_end_date. This features is about date.
+ · payment_plan_start_date. This features is about date.
+ · hardship_length. Most values of this feature has null values.
+ · hardship_dpd. Most values of this feature has null values.
+ · hardship_loan_status. Most values of this feature has null values.
+ · orig_projected_additional_accrued_interest. Most values of this feature has null values.
+ · hardship_payoff_balance_amount. Most values of this feature has null values.
+ · hardship_last_payment_amount. Most values of this feature has null values.
+ · debt_settlement_flag_date. This features is about date.
+ · settlement_status. Most values of this feature has null values.
+ · settlement_date. This features is about date.
+ · settlement_amount. Most values of this feature has null values.
+ · settlement_percentage. Most values of this feature has null values.
+ · settlement_term. Most values of this feature has null values.
+ · mths_since_last_delinq. Most values of this feature has null values.
+ · mths_since_last_record. Most values of this feature has null values.
+ · mths_since_last_major_derog. Most values of this feature has null values.
+ · mths_since_recent_bc_dlq. Most values of this feature has null values.
+ · mo_sin_old_il_acct. This feature has NA values.
+ · mths_since_recent_revol_delinq. This feature has NA values.
+ · tot_coll_amt, tot_cur_bal, tot_cur_bal, total_rev_hi_lim, acc_open_past_24mths, acc_open_past_24mths, avg_cur_bal, bc_open_to_buy, bc_util, mo_sin_old_rev_tl_op, mo_sin_rcnt_rev_tl_op, mo_sin_rcnt_tl, mort_acc and other variabes. These feature has NA values.
+
+  Define a new variable default as 1 if loan_status is "Charged Off", and 0 if loan_status is "Fully Paid".
+```{r, warning=F, message=F}
+library(dplyr)
+data1 <- data %>%
+  filter(loan_status == "Fully Paid" | loan_status == "Charged Off") %>%
+  mutate(label = ifelse(loan_status == "Fully Paid", 0, 1))
+data1$label <- factor(data1$label)
+data1$int_rate1 <- as.numeric(sub("%", "", data1$int_rate)) / 100
+data1$revol_util1 <- as.numeric(sub("%", "", data1$revol_util)) / 100
+```
+
+  Drop colnumns.
+```{r, warning=F, message=F}
+features <- c(
+  "id", "member_id", "sub_grade", "emp_title", "issue_d", "pymnt_plan", "desc", 
+  "title", "zip_code", "earliest_cr_line", "last_pymnt_d", "next_pymnt_d", 
+  "last_credit_pull_d", "policy_code", "application_type", "annual_inc_joint", 
+  "dti_joint", "verification_status_joint", "open_acc_6m", "open_act_il", 
+  "open_il_12m", "open_il_24m", "mths_since_rcnt_il", "total_bal_il", "il_util", 
+  "open_rv_12m", "open_rv_24m", "max_bal_bc", "all_util", "inq_fi", "total_cu_tl", 
+  "inq_last_12m", "revol_bal_joint", "sec_app_fico_range_low", "sec_app_fico_range_high",
+  "sec_app_earliest_cr_line", "sec_app_inq_last_6mths", "sec_app_mort_acc",
+  "sec_app_open_acc", "sec_app_revol_util", "sec_app_open_act_il", "sec_app_num_rev_accts",
+  "sec_app_chargeoff_within_12_mths", "sec_app_collections_12_mths_ex_med", 
+  "sec_app_mths_since_last_major_derog", "hardship_flag", "hardship_type", 
+  "deferral_term", "hardship_reason", "hardship_status", "hardship_amount", 
+  "hardship_start_date", "hardship_end_date", "payment_plan_start_date", 
+  "hardship_length", "hardship_dpd", "hardship_loan_status", 
+  "orig_projected_additional_accrued_interest", "hardship_payoff_balance_amount",
+  "hardship_last_payment_amount", "debt_settlement_flag_date", "settlement_date", 
+  "settlement_status", "settlement_amount", "settlement_percentage", "settlement_term",
+  "mths_since_last_delinq", "mths_since_last_record", "mths_since_last_major_derog",
+  "mths_since_recent_bc_dlq", "grade", "int_rate", "revol_util", "percent_bc_gt_75",
+  "mo_sin_old_il_acct", "mths_since_recent_revol_delinq", "tot_coll_amt", "tot_cur_bal",
+  "total_rev_hi_lim", "acc_open_past_24mths", "avg_cur_bal", "bc_open_to_buy", "bc_util", 
+  "mo_sin_old_rev_tl_op", "mo_sin_rcnt_rev_tl_op", "mo_sin_rcnt_tl", "mort_acc",
+  "mths_since_recent_bc"< "mths_since_recent_inq",  "num_accts_ever_120_pd", "num_actv_bc_tl",
+  "num_actv_rev_tl", "num_bc_sats", "num_bc_tl", "num_il_tl", "num_op_rev_tl",
+  "num_rev_accts", "num_rev_tl_bal_gt_0", "num_sats", "num_tl_120dpd_2m", "num_tl_30dpd",
+  "num_tl_90g_dpd_24m", "num_tl_op_past_12m", "pct_tl_nvr_dlq", "tot_hi_cred_lim",
+  "total_bal_ex_mort", "total_bc_limit", "total_il_high_credit_limit", "revol_util1",
+  "mths_since_recent_bc", "mths_since_recent_inq",
+  "loan_status", "purpose", "addr_state", "total_pymnt", "total_pymnt_inv", "total_rec_prncp")
+data2 <- data1[,!names(data1) %in% features] %>%
+  mutate_if(is.character, as.factor)
+```
+
+  Divide dataset into training set and testing set.
+```{r, warning=F, message=F}
+set.seed(100)
+train <- sample(nrow(data2), 0.7 * nrow(data2))
+trainset <- data2[train, ]
+testset <- data2[-train, ]
+```
+
+## ii
+  
+ Build a randomForest model by using training set when setting mtry is ncol(trainset) and ntree is 25. Then make prediction on testset. Baesd on the auc curve, the roc area is 0.985, 
+```{r, warning=F, message=F}
+library(randomForest)
+set.seed(1) 
+forest_p1n25 <- randomForest(label ~ ., data = trainset, importance = TRUE,
+                              mtry = ncol(trainset), ntree = 25)
+library(pROC)
+pred_p1n25 <- predict(forest_p1n25, testset)
+roc_p1n25 <- roc(as.numeric(testset$label), as.numeric(pred_p1n25))
+plot(roc_p1n25, print.auc = TRUE, auc.polygon = TRUE, grid = c(0.1, 0.2),
+     grid.col = c("green", "red"), max.auc.polygon = TRUE, legacy.axes = TRUE,
+     auc.polygon.col = "skyblue", print.thres = TRUE)
+```
+  
+   Build a randomForest model by using training set when setting mtry is ncol(trainset)/2 and ntree is 25. Then make prediction on testset. Baesd on the auc curve, the roc area is 0.984, 
+```{r, warning=F, message=F}
+set.seed(1)
+forest_p2n25 <- randomForest(label~., data = trainset, importance = TRUE,
+                             mtry = ncol(trainset) / 2, ntree = 25)
+pred_p2n25 <- predict(forest_p2n25, testset)
+roc_p2n25 <- roc(as.numeric(testset$label), as.numeric(pred_p2n25))
+plot(roc_p2n25, print.auc = TRUE, auc.polygon = TRUE, grid = c(0.1, 0.2),
+     grid.col = c("green", "red"), max.auc.polygon = TRUE, legacy.axes = TRUE,
+     auc.polygon.col = "skyblue", print.thres = TRUE)
+```
+  
+  Build a randomForest model by using training set when setting mtry is sqrt(ncol(trainset)) and ntree is 25. Then make prediction on testset. Baesd on the auc curve, the roc area is 0.979, 
+```{r, warning=F, message=F}
+set.seed(1) 
+forest_p3n25 <- randomForest(label~., data = trainset, na.action = na.roughfix,   
+                           importance = TRUE, mtry = sqrt(ncol(trainset)), 
+                           ntree = 25)
+pred_p3n25 <- predict(forest_p3n25, testset, type = "response")
+roc_p3n25 <- roc(as.numeric(testset$label), as.numeric(pred_p3n25))
+plot(roc_p3n25, print.auc = TRUE, auc.polygon = TRUE, grid = c(0.1, 0.2),
+     grid.col = c("green", "red"), max.auc.polygon = TRUE, legacy.axes = TRUE,
+     auc.polygon.col = "skyblue", print.thres = TRUE)
+```
+
+  Build a randomForest model by using training set when setting mtry is ncol(trainset) and ntree is 500. Then make prediction on testset. Baesd on the auc curve, the roc area is 0.985. 
+```{r, warning=F, message=F}
+set.seed(1) 
+forest_p1n500 <- randomForest(label~., data = trainset, importance = TRUE, 
+                              mtry = ncol(trainset), ntree = 500)
+pred_p1n500 <- predict(forest_p1n500, testset)
+roc_p1n500 <- roc(as.numeric(testset$label), as.numeric(pred_p1n500))
+plot(roc_p1n500, print.auc = TRUE, auc.polygon = TRUE, grid = c(0.1, 0.2),
+     grid.col = c("green", "red"), max.auc.polygon = TRUE, legacy.axes = TRUE,
+     auc.polygon.col = "skyblue", print.thres = TRUE)
+```
+
+  Build a randomForest model by using training set when setting mtry is ncol(trainset)/2 and ntree is 500. Then make prediction on testset. Baesd on the auc curve, the roc area is 0.985, 
+```{r, warning=F, message=F}
+set.seed(1)
+forest_p2n500 <- randomForest(label~., data = trainset, importance = TRUE,
+                              mtry = ncol(trainset)/2, ntree = 500)
+pred_p2n500 <- predict(forest_p2n500, testset)
+roc_p2n500 <- roc(as.numeric(testset$label), as.numeric(pred_p2n500))
+plot(roc_p2n500, print.auc = TRUE, auc.polygon = TRUE, grid = c(0.1, 0.2),
+     grid.col = c("green", "red"), max.auc.polygon = TRUE, legacy.axes = TRUE,
+     auc.polygon.col = "skyblue", print.thres = TRUE)
+```
+
+ Build a randomForest model by using training set when setting mtry is sqrt(ncol(trainset)) and ntree is 500. Then make prediction on testset. Baesd on the auc curve, the roc area is 0.979, 
+```{r, warning=F, message=F}
+set.seed(1)
+forest_p3n500 <- randomForest(label~., data = trainset, na.action = na.roughfix,   
+                           importance = TRUE, mtry = sqrt(ncol(trainset)), 
+                           ntree = 500)
+pred_p3n500 <- predict(forest_p3n500, testset)
+roc_p3n500 <- roc(as.numeric(testset$label), as.numeric(pred_p3n500))
+plot(roc_p3n500, print.auc = TRUE, auc.polygon = TRUE, grid = c(0.1, 0.2),
+     grid.col = c("green", "red"), max.auc.polygon = TRUE, legacy.axes = TRUE,
+     auc.polygon.col = "skyblue", print.thres = TRUE)
+```
+
+## iii
+  
+  Baesd on the auc curve, the maxest roc area is 0.985 at below situations: mtry is ncol(trainset) and ntree is 25, mtry is ncol(trainset) and ntree is 500, mtry is ncol(trainset)/2 and ntree is 500.  Considering model complexity, that mtry is ncol(trainset) and ntree is 25 should be choosed.
+  
+  Use importance function to generate variable importance plot from RF_1. This plot tells us some variables
+like recoveries, last_pymnt_amnt, total_rec_int and so on has big impact on the model, otherwise other variables like collection_recovery_fee, out_prncp_inv, out_prncp delinq_amnt can be excluded from the model.
+```{r, warning=F, message=F, fig.width=12, fig.height=8}
+RF_1 <- forest_p1n25
+options(scipen = 200)
+varImpPlot(RF_1)
+```
+  
+  Based on this plot, We can make some changes about RF_1 that drop some useless variables to decrease model complexity and imporve model accuracy.

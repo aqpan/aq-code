@@ -1,0 +1,125 @@
+---
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+  Load data.
+```{r, warning=F, message=F}
+data <- read.csv("./data/LoanActivity.csv")
+```
+
+# **Part A. Data preparation**
+
+## i
+  
+  Define a new variable default as 1 if loan_status is "Charged Off", and 0 if loan_status is "Fully Paid".
+```{r, warning=F, message=F}
+library(dplyr)
+data1 <- data %>%
+  filter(loan_status == "Fully Paid" | loan_status == "Charged Off") %>%
+  mutate(label = ifelse(loan_status == "Fully Paid", 0, 1))
+data1$int_rate1 <- as.numeric(sub("%", "", data1$int_rate)) / 100
+```
+
+## ii
+  
+  Divide dataset into training set and testing set.
+```{r, warning=F, message=F}
+result <- data.frame(round(prop.table(xtabs( ~ label, data1)), 2))
+```
+  
+  The average default rate in the sample is `r result[2, 2]`.
+
+## iii
+
+```{r, warning=F, message=F}
+testset <- data1[1:8000, ]
+trainset <- data1[8001:nrow(data1), ]
+```
+
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+write.csv(data1, "./data/data1.csv")
+write.csv(trainset, "./data/trainset.csv")
+write.csv(testset, "./data/testset.csv")
+```
+
+# **Part B. Logistic regression **
+
+## i
+  
+ Build a logistic regression of default on grade by using training set. Then use summary function to show the results.
+```{r, warning=F, message=F}
+LR_1 <- glm(label ~ grade, data = trainset, family = "binomial")
+summary(LR_1)
+```
+
+  When only including grade variable, the model LR_1 shows that the intercept is negative and the variable grade is positive. The p-value of these two variables are all less than 0.05 which means they are significant. These numbers really make sense and all have impact on this model.
+  
+## i
+  
+  Build a logistic regression of default on loan_amnt and annual_inc by using training set. Then use summary function to show the results.
+```{r, warning=F, message=F}
+LR_2 <- glm(label ~ loan_amnt + annual_inc, data = trainset, family = "binomial")
+summary(LR_2)
+```
+  
+  When including loan_amnt and annual_inc variable, the model LR_2 shows that the intercept and annual_inc are negative and the variable loan_amnt is positive. The p-value of these variables are all less than 0.05 which means they are significant. These numbers really make sense and all have impact on this model.
+  
+ Build a logistic regression of default on grade by using training set. Then use summary function to show the results.
+ 
+```{r, warning=F, message=F}
+LR_3 <- glm(label ~ loan_amnt + annual_inc + term + int_rate1, data = trainset, family = "binomial")
+summary(LR_3)
+```
+  
+  When including loan_amnt, annual_inc, term and int_rate1 variable, the model LR_3 shows that the intercept and annual_inc are negative and the variable loan_amnt, term and int_rate1 are positive. The p-value of these variables are all less than 0.05 which means they are significant. These numbers really make sense and all have impact on this model.
+
+# iii
+  
+  Make prediction on the testset.
+```{r, warning=F, message=F}
+pred1 <- predict(LR_1, testset, type = "response")
+pred1 <- as.factor(ifelse(pred1 > 0.21, 1, 0))
+pred2 <- predict(LR_2, testset, type = "response")
+pred2 <- as.factor(ifelse(pred2 > 0.13, 1, 0))
+pred3 <- predict(LR_3, testset, type = "response")
+pred3 <- as.factor(ifelse(pred3 > 0.25, 1, 0))
+result <- as.factor(testset$label)
+```
+
+  Compute the error rate on the testset. The result shows model LR_3 has least value among these three models, which means this model has best performance on the testset according to the error rate.
+```{r, warning=F, message=F}
+result1 <- table(result, pred1)
+dev1 <- (result1[1, 2] + result1[2, 1]) / 
+  (result1[1, 2] + result1[2, 1] + result1[1, 1] + result1[2, 2])
+dev1
+result2 <- table(result, pred2)
+dev2 <- (result2[1, 2] + result2[2, 1]) / 
+  (result2[1, 2] + result2[2, 1] + result2[1, 1] + result2[2, 2])
+dev2
+result3 <- table(result, pred3)
+dev3 <- (result3[1, 2] + result3[2, 1]) /
+  (result3[1, 2] + result3[2, 1] + result3[1, 1] + result3[2, 2])
+dev3
+```
+  
+  Use roc function to plot the roc value based on these three models. From the plot above, I see that the first model LR_1 has largest value, which means this model has best performance on the testset according to the roc and auc curve.
+```{r, warning=F, message=F}
+library(pROC)
+modelroc1 <- roc(as.numeric(result), as.numeric(pred1))
+modelroc2 <- roc(as.numeric(result), as.numeric(pred2))
+modelroc3 <- roc(as.numeric(result), as.numeric(pred3))
+plot(modelroc1, print.auc = TRUE, auc.polygon = TRUE, grid = c(0.1, 0.2),
+     grid.col = c("green", "red"), max.auc.polygon = TRUE,
+     auc.polygon.col = "skyblue", print.thres = TRUE)
+plot(modelroc2, print.auc = TRUE, auc.polygon = TRUE, grid = c(0.1, 0.2),
+     grid.col = c("green", "red"), max.auc.polygon = TRUE,
+     auc.polygon.col = "skyblue", print.thres = TRUE)
+plot(modelroc3, print.auc = TRUE, auc.polygon = TRUE, grid = c(0.1, 0.2),
+     grid.col = c("green", "red"), max.auc.polygon = TRUE,
+     auc.polygon.col = "skyblue", print.thres = TRUE)
+```

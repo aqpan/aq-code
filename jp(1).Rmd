@@ -1,0 +1,142 @@
+---
+title: "JobPosting"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
+
+## scrap jobs for statistician
+In this project, I will scrap the job postings from the www.careerbuilder.com. First, we have to find the total number of jobs in each query. We can find the information from the `"<div id='job-count'>"`. The job informations can be found from `"<div id='jobs_collection'>"`, the additional infos are in the aonther url, we have to access another url to get the information. So we have to extrac the url of the detail job descriptions.
+
+```{r}
+library(rvest)
+library(tidyverse)
+getURLS <- function(keyword){
+  url <- paste0("https://www.careerbuilder.com/jobs?keywords=", keyword)
+  url <- URLencode(url)
+  page <- read_html(url)
+  count <- html_node(page, "div#job-count")
+  count <- html_text(count)
+  count <- as.numeric(gsub(",", "",str_extract(count, "\\d+,?\\d+")))
+  print(count)
+  urls <- c()
+  for(i in 1:ceiling(count/25)){
+    url <- paste0("https://www.careerbuilder.com/jobs?keywords=", keyword, "&page_number=",i)
+    url <- URLencode(url)
+    page <- read_html(url)
+    collections <- html_node(page, "div#jobs_collection")
+    results <- html_nodes(collections, "a.job-listing-item")
+    urls <- c(urls, html_attr(results, "href"))
+    if(i>10){
+      break
+    }
+  }
+  urls
+}
+```
+
+Query the job urls for the three query words.
+```{r eval=F}
+urls1 <- getURLS("statistician")
+urls2 <- getURLS("data scientist")
+urls3 <- getURLS("data analyst")
+```
+
+Get the details of each job, the job data is in the div `"<div class='jdp-data'>"`, the salary information is in the `"<div id='cb-salcom-info'>"`, the description information is in the div `"<div id='jdp_description'>"`, the overview information is in the div `"<div id='jdp_company'>"`.
+
+```{r eval=F}
+getDetail <- function(url){
+  url <- paste0("https://www.careerbuilder.com", url)
+  page <- read_html(url)
+  data <- html_node(page, "div#jdp-data")
+  title <- html_text(html_node(data, "h2"))
+  details <- unlist(strsplit(trimws(html_text(html_node(page, "div.data-details"))), "\n"))
+  company <- details[1]
+  address <- details[2]
+  worktype <- details[3]
+  salary <- trimws(html_text(html_node(page, "div#cb-salcom-info")))
+  desc <- trimws(html_text(html_node(page, "div#jdp_description")))
+  overview <- trimws(html_text(html_node(page, "#jdp_company")))
+  c(title, company, address, worktype, salary, desc, overview)
+}
+jobs2 <- lapply(urls2[1:300], getDetail)
+jobs3 <- lapply(urls3, getDetail)
+jobs1 <- lapply(urls1, getDetail)
+```
+
+Merge the three dataset, combine the three dataset into one dataset, cache the scraped dataset.
+```{r eval=F}
+dat1 <-  do.call("rbind", jobs1)
+dat2 <-  do.call("rbind", jobs2)
+dat3 <-  do.call("rbind", jobs3)
+dat1 <- as.data.frame(dat1)
+dat2 <- as.data.frame(dat2)
+dat3 <- as.data.frame(dat3)
+colnames(dat1) <- c("title", "company", "location", "worktype", "salary", "desc", "overview")
+colnames(dat2) <- c("title", "company", "location", "worktype", "salary", "desc", "overview")
+colnames(dat3) <- c("title", "company", "location", "worktype", "salary", "desc", "overview")
+dat1$keyword <- "statistician"
+dat2$keyword <- "data scientist"
+dat3$keyword <- "data analyst"
+dat <- rbind(dat1, dat2)
+dat <- rbind(dat, dat3)
+saveRDS(dat, "data.RDS")
+```
+
+
+```{r}
+dat <- readRDS("data.RDS")
+head(dat, 20)
+```
+
+
+Number of job posts per keyword.
+```{r}
+table(dat$keyword) 
+```
+
+The distribution of work types.
+```{r}
+barplot(table(dat$worktype))
+```
+
+Most of the jobs are full-time, and the second largest number of jobs is contractor, the third is intern.
+
+Top 10 locations with the most jobs.
+```{r warning=F, message=F}
+library(dplyr)
+dat %>% group_by(location) %>% summarise(count=n()) %>%
+  arrange(desc(count)) %>% head(10)
+```
+
+Chicago has the largest number of jobs, Baltimore has the second largest number of jobs,  New York has the third largest number of jobs.
+
+Find the word frequency in the job descriptions, the top ten words show as below:
+```{r warning=F, message=F}
+library(tidyverse)
+library(tidytext)
+library(wordcloud)
+df <- data.frame(id=1:nrow(dat),text=dat$desc)
+tokens <- df %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>% 
+  count(word, sort = TRUE)
+head(tokens, 20)
+```
+
+Data occurs the most times, data has the second largest count, job has the third largest number, experience has the fourth largest count.
+
+
+Create a word cloud the word frequencies.
+```{r}
+tokens %>% 
+  with(wordcloud(
+    word, n, min.freq = 2, max.words = 100, random.order = FALSE,
+    colors = brewer.pal(8, "Dark2")))
+```
+

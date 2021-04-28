@@ -1,0 +1,299 @@
+---
+title: "Assignment"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidytext)
+```
+
+## Reading emails
+Define a function to extract the email header, any line before the first empty line occured is considered as the email header.
+```{r}
+# Get the email header
+getHeader <- function(lines){
+  index <- 1
+  for(line in lines){
+    line <- trimws(line)
+    if(line==""){
+      break
+    }
+    index <- index + 1
+  }
+  header <- lines[1:(index-1)]
+  header
+}
+```
+
+Define a function to extract the email message body, any content which do not belong to the multipart is considered belong to the message body.
+```{r}
+# get the email body
+getBody <- function(lines){
+  temp <- lines[grepl("Content-Type:", lines, ignore.case = T)]
+  line <- ""
+  if(length(temp)>=1){
+    line <- temp[1]
+  }
+  contentType <- str_extract(line, "(?<=Content-Type: )(.*)(?=;)")
+  contentType <- unlist(strsplit(contentType, ";"))[1]
+  contentType <- trimws(tolower(contentType))
+  if(grepl("multipart", contentType)){
+    temp <- lines[grepl("boundary=", lines, ignore.case = T)]
+    temp <- tolower(temp)
+    boundry = str_extract(temp[1], '(?<=\")(.*)(?=")')
+    if(is.na(boundry)){
+      boundry = str_extract(temp[1], 'boundary=(.*)')
+      boundry <- gsub("boundary=", "", boundry, ignore.case = T)
+    }
+    index <- which(grepl("Content-Type: text/plain", lines, ignore.case = T))
+    if(length(index)>0){
+      index <- index[1]
+      stop <- length(lines)
+      for(i in (index+1):length(lines)){
+        if(grepl(boundry, lines[i])){
+          stop <- i-1
+          break
+        }
+      }
+      return(lines[(index+1):stop])
+    }
+    return("")
+  }else{
+      index <- 1
+      for(line in lines){
+        line <- trimws(line)
+        if(line==""){
+          break
+        }
+        index <- index + 1
+      }
+      body <- lines[(index+1):length(lines)]
+      return(body)
+  }
+}
+```
+
+Loop for each email, reading the lines of each email to a list.
+```{r warning=FALSE, message=F}
+emails <- list()
+index <- 1
+paths <- c()
+for(dir in list.dirs("./SpamAssassinTrain")[-1]){
+  filenames <- list.files(dir)
+  filenames <- paste0(dir, "/", filenames)
+  paths <- c(paths, filenames)
+  for(i in 1:length(filenames)){
+    emails[[index]] <- readLines(filenames[i])
+    index <- index + 1
+  }
+}
+```
+
+## Data cleaning
+Find the content type of each email, most of the emails are in plain text form.
+```{r}
+contents <- c()
+for(i in 1:length(emails)){
+  lines <- emails[[i]]
+  lines <- lines[grepl("Content-Type:", lines, ignore.case = T)]
+  line <- ""
+  if(length(lines)>=1){
+    line <- lines[1]
+  }
+  contentType <- str_extract(line, "(?<=Content-Type: )(.*)(?=;)")
+  contentType <- unlist(strsplit(contentType, ";"))[1]
+  contents[i] <- trimws(tolower(contentType))
+}
+table(contents)
+```
+
+Whether the header states that the message is a multipart/text, i.e. with attachments.
+```{r}
+multipartText <- grepl("multipart", contents)
+```
+
+Get the headers of each email.
+```{r}
+headers <- lapply(emails, getHeader)
+```
+
+Get the message body of each email.
+```{r}
+bodies <- lapply(emails, getBody)
+```
+
+Whether mail is Spam (TRUE) or Ham (FALSE).
+```{r}
+isSpam <- !grepl("ham", paths)
+table(isSpam)
+```
+
+Get the number of attachments in the message, draw a histogram of the number of lines in the body, most of the emails have a line number less than 1000.
+```{r}
+numLinesInBody <- sapply(bodies, length)
+hist(numLinesInBody)
+```
+
+Get the number of characters in the body of the email message, the distribution is right skewed  as the histogram demonstrates.
+```{r}
+bodyCharacterCount <- sapply(sapply(bodies, nchar, allowNA=T), sum)
+hist(bodyCharacterCount)
+```
+
+Get the subjects of the emails.
+```{r}
+getSubject <- function(header){
+  lines <- header[grepl("Subject:", header, ignore.case = T)]
+  if(length(lines)>=1){
+    line = lines[1]
+    line <- gsub("Subject:", "", line)
+    line <- trimws(line)
+    line
+  }else{
+    return("")
+  }
+}
+subjects <- sapply(headers, getSubject)
+```
+
+Get the number of exclamation marks (!) in the subject of the message. Most of the emails do not have  exclamation marks.
+```{r}
+subjectExclamationCount <- str_count(subjects, "!")
+barplot(table(subjectExclamationCount))
+```
+
+Get the number of question marks in the subject.
+```{r}
+subjectQuestCount <- str_count(subjects, "\\?")
+barplot(table(subjectQuestCount))
+```
+
+Combine all the messages lines into a text for each message.
+```{r}
+body_text <- sapply(bodies, paste0, collapse=", ")
+```
+
+Get the number of dollar signs in the body of the message.
+```{r}
+numDollarSigns <- sapply(body_text, function(text){
+  str_count(text, "\\$")
+})
+hist(numDollarSigns)
+```
+
+```{r}
+averageWordLength <- sapply(bodies, function(lines){
+  df <- tibble(line = 1:length(lines), text = lines)
+  df <- df %>% unnest_tokens(word, text)
+  mean(nchar(df$word))
+})
+```
+
+The distribution of the average number of word length is right skewed.
+```{r}
+hist(averageWordLength)
+```
+
+The percentage of the characters in the body of the email that are upper case is left skewed.
+```{r}
+percentCapitals <- str_count(body_text, "[a-zA-Z]")/str_length(body_text)
+hist(percentCapitals)
+```
+
+Whether the header of the message has an In-Reply-To field.
+```{r}
+isInReplyTo <- sapply(headers, function(header){
+  any(grepl("In-Reply-To:", header, ignore.case = T))
+})
+table(isInReplyTo)
+```
+
+Whether the subject has punctuation or digits surrounded by characters, e.g. V?agra and pay1ng, but not New!
+```{r}
+subjectPunctuationCheck <- sapply(subjects, function(subject){
+  any(grepl("[A-Za-z][[:punct:]]+[A-Za-z]", subject, ignore.case = T))
+})
+```
+
+Whether the message’s header had an X-Priority or X-SmellPriority that was set to high
+```{r}
+isPGPsigned <- sapply(emails, function(lines){
+  any(grepl("PGP-?SIGNATURE", lines, ignore.case = T)) |
+    any(grepl("GPG-Key-Fingerprint", lines, ignore.case = T))
+})
+table(isPGPsigned)
+```
+
+Find the percentage of blanks in the subject, we can find that the distribution is right skewed.
+```{r}
+percentSubjectBlanks <- str_count(subjects, " ")/str_length(subjects)
+hist(percentSubjectBlanks)
+```
+
+Whether the message body contains a form of the introduction Dear.
+```{r}
+isDear <- sapply(body_text, function(text){
+  any(grepl("dear ", text, ignore.case = T))
+})
+table(isDear)
+```
+
+Whether the text includes a line indicating an included message as identified by the word wrote:.
+```{r}
+isWrote <- sapply(body_text, function(text){
+  any(grepl("wrote:", text, ignore.case = T))
+})
+table(isWrote)
+```
+
+Whether the string Re: appears as the first word in the subject of the message.
+```{r}
+isRe <- grepl("RE:", subjects, ignore.case = T)
+```
+
+Combine all the data.
+```{r}
+data <- data.frame(
+  isSpam, isRe, numLinesInBody, bodyCharacterCount, subjectExclamationCount,
+  subjectQuestCount, isInReplyTo, multipartText, percentSubjectBlanks,
+  isPGPsigned, isDear, subjectPunctuationCheck, 
+  isWrote, averageWordLength, numDollarSigns
+)
+head(data)
+```
+
+## Analysis
+```{r}
+data %>% group_by(isSpam) %>% summarise(numLinesInBody=mean(numLinesInBody)) %>%
+  ggplot(aes(x=isSpam, y=numLinesInBody, fill=isSpam)) + geom_bar(stat="identity") +
+  ylab("Average number lines in body")
+```
+
+The average number of lines in a spam email is longer than that of the ham emails.
+
+```{r}
+data %>% group_by(isSpam) %>% summarise(bodyCharacterCount=mean(bodyCharacterCount, na.rm=T)) %>%
+  ggplot(aes(x=isSpam, y=bodyCharacterCount, fill=isSpam)) + geom_bar(stat="identity") +
+  ylab("Average number of characters in body")
+```
+
+The average number of characters in spam emails is higehr than that of the ham emails.
+
+```{r}
+data %>% group_by(isSpam) %>% summarise(numDollarSigns=mean(numDollarSigns)) %>%
+  ggplot(aes(x=isSpam, y=numDollarSigns, fill=isSpam)) + geom_bar(stat="identity") +
+  ylab("Average number dollar signs in body")
+```
+
+The average number dollar signs in spam emails is higher than that of the ham emails.
+
+```{r}
+data %>% group_by(isSpam) %>% summarise(percent=mean(isDear)) %>%
+  ggplot(aes(x=isSpam, y=percent, fill=isSpam)) + geom_bar(stat="identity")
+```
+
+The percentage of using dear in spam emails is higher than that of the ham emails.

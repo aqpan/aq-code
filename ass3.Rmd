@@ -1,0 +1,195 @@
+---
+title: "Assignment 3"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**1. What years does the data cover? are there data for each of these years?**
+```{r warning=F, message=F}
+library(RSQLite)
+library(DBI)
+library(tidyverse)
+baseball <- dbConnect(SQLite(), "lahman2013.sqlite")
+dbGetQuery(baseball, 
+           "SELECT min(yearID) as min_year, max(YearID) as max_year FROM batting")
+```
+
+
+The minimum year is 1871, the maximum year is 2013.
+
+```{r}
+dbGetQuery(baseball, 
+           "SELECT count(distinct yearID) as total FROM batting")
+```
+
+```{r}
+length(1871:2013)
+```
+
+So there are data for each of these years.
+
+**2. How many (unique) people are included in the database? How many are players, managers, etc?**
+```{r}
+dbGetQuery(baseball, 
+           "SELECT count(distinct playerID) as total FROM master")
+```
+
+There are 18354 unique players are included in the database.
+
+```{r}
+dbGetQuery(baseball, 
+           "SELECT count(distinct playerID) as total FROM ManagersHalf")
+```
+
+There are 54 managers.
+
+**3. ? How many players became managers?**
+```{r}
+dbGetQuery(baseball, 
+           "SELECT count(distinct playerID) FROM Managers where plyrMgr='Y'")
+```
+
+247 players became managers.
+
+
+**4. How many players are there in each year, from 2000 to 2013? Do all teams have the same
+number of players?**
+
+```{r}
+dbGetQuery(baseball, 
+           "SELECT yearID, count(distinct playerID) as 
+           num FROM batting where yearID>=2000 and yearID<=2013 group by yearID")
+```
+
+
+```{r}
+dbGetQuery(baseball, 
+           "SELECT yearID, teamID, count(distinct playerID) as 
+           num FROM batting where yearID>=2000 and 
+           yearID<=2013 group by yearID, teamID")
+```
+
+Not the same number.
+
+**5. What team won the World Series in 2010? Include the name of the team, the league and division.**
+```{r}
+dbGetQuery(baseball, 
+           "SELECT name, lgID, divID from Teams where yearID=2010 and WSWin='Y'")
+```
+
+
+**6. What team lost the World Series each year? Again, include the name of the team, league and division.**
+
+```{r}
+dbGetQuery(baseball, 
+           "SELECT name, lgID, divID from Teams where WSWin='N'")
+```
+
+
+**7. Compute the table of World Series winners for all years, again with the name of the team, league
+and division.**
+```{r}
+dbGetQuery(baseball, 
+           "SELECT name, lgID, divID from Teams where WSWin='Y'")
+```
+
+
+**8. Compute the table that has both the winner and runner-up for the World Series in each tuple/row
+for all years, again with the name of the team, league and division, and also the number games the
+losing team won in the series. The first 3 rows look like**
+
+2013|BOS|Boston Red Sox|AL|E|SLN|St. Louis Cardinals|NL|C|3
+2012|SFN|San Francisco Giants|NL|W|DET|Detroit Tigers|AL|C|0
+2011|SLN|St. Louis Cardinals|NL|C|TEX|Texas Rangers|AL|W|3
+
+```{r}
+dbGetQuery(baseball, 
+           "SELECT yearId, teamID, name, lgID, 
+           divID from Teams where WSWin='Y' order by yearID desc")
+```
+
+
+**9. Do you see a relationship between the number of games won in a season and winning the World
+Series?**
+```{r}
+dbGetQuery(baseball, 
+           "SELECT W, WSWin from Teams where WSWin is not null" ) %>%
+  ggplot(aes(x=WSWin, y=W)) + geom_boxplot()
+```
+
+
+**10. In 2003, what were the three highest salaries? (We refer here to unique salaries, i.e., there may
+be several players getting the exact same amount.) Find the players who got any of these 3 salaries
+with all of their details?**
+```{r}
+dbGetQuery(baseball, 
+           "select * from master where playerID in
+           (SELECT playerID from Salaries  where 
+           yearID=2003 order by salary desc limit 3)") 
+```
+
+
+
+**11. For 2010, compute the total payroll of each of the different teams. Next compute the team
+payrolls for all years in the database for which we have salary information. Display these in a plot.
+
+```{r}
+dbGetQuery(baseball, 
+           "select teamID, sum(salary) as payroll from  salaries where yearID=2010 group by teamID") 
+```
+
+```{r}
+dbGetQuery(baseball, 
+           "select yearID, sum(salary) as payroll from  salaries  group by yearID") %>%
+  ggplot(aes(x=yearID, y=payroll)) + geom_line()
+```
+
+
+12. Explore the change in salary over time. Use a plot. Identify the teams that won the world
+series or league on the plot. How does salary relate to winning the league and/or world series.
+13. Compare payrolls for the teams that are in the same leagues, and then in the same divisions.
+Are there any interesting characteristics? Have certain teams always had top payrolls over the
+years? Is there a connection between payroll and performance?**
+
+
+```{r}
+df <- dbGetQuery(baseball, 
+           "SELECT yearId from Teams where WSWin='Y' and teamid='BOS'")
+df
+dbGetQuery(baseball, 
+           "select yearID, sum(salary) as payroll from  salaries where teamID='BOS' group by yearID") %>%
+  ggplot(aes(x=yearID, y=payroll)) + geom_line() 
+```
+
+
+14. Which player has hit the most home runs? Show the number per year.
+```{r}
+dbGetQuery(baseball, 
+           "SELECT playerID, sum(HR) as homerun from Batting 
+           group by playerID order by homerun desc limit 1")
+```
+
+Player bondsba01 has hit the most home runs.
+
+```{r}
+dbGetQuery(baseball, 
+           "SELECT yearID, sum(HR) as homerun from Batting where playerID='bondsba01' 
+           group by yearID")
+```
+
+
+
+15. Has the distribution of home runs for players increased over the years?
+```{r}
+dbGetQuery(baseball, 
+           "SELECT yearID, sum(HR) as homerun from Batting
+           group by yearID") %>%
+  ggplot(aes(x=yearID, y=homerun)) + geom_line()
+```
+
+Yes, the distribution of home runs for players has increased over the years.

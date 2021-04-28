@@ -1,0 +1,221 @@
+---
+title: 'STA 141A Spring 2020: Homework 2'
+author: 'Anqi Pan'
+date: "4/21/2020"
+output:
+  html_document:
+    number_sections: no
+---
+
+
+
+The assignment has to be done in an [R Markdown](https://rmarkdown.rstudio.com) document. The assignment has to be submitted electronically on Canvas until the deadline of April 22, 2020 at 6:00 PM by uploading two files:
+
+1. an HTML or PDF file;
+2. the Rmd source file.
+
+It is possible to upload two files on Canvas. Late submissions will not be accepted.
+
+Each answer has to be based on `R` code that shows how the result was obtained. `R` code has to answer the question or solve the task. For example, if you are asked to find the largest entry of a vector, `R` code has to return the largest element of the vector. If `R` code just prints all values of the vector and you determine which entry is the largest by hand, this will not be accepted as an answer. No points will be given for answers that are not based on `R` code. 
+
+There are many possible ways to write `R` code that is needed to answer the questions or do the tasks, but for some of the questions or tasks you might have to use something that has not been discussed during the lectures or the discussion sessions. You will have to come up with a solution on your own. This is a very important part of learning (if not the most important part of learning). Try to understand what you need to do to complete the task or answer the question and feel free to search the Internet for possible solutions and discuss possible solutions with other students. It is perfectly fine to ask what kind of an approach or a function other students use. However, you are not allowed to share your code or your answers with other students. Everyone has to write the code, do the tasks and answer the questions on their own. To put it simply, sharing ideas is fine, plagiarizing is not.
+
+The total number of points of this assignment is 30.
+
+Good luck!
+
+
+
+# Simulation study
+Suppose that $X_1,\ldots,X_n$ are independent and identically distributed (iid) binomial random variables such that
+\[
+  P(X_i=x\mid k,p)
+  ={k\choose x}p^x(1-p)^{k-x},\quad x=0,1,\ldots,k
+\]
+for all $i=1,\ldots,n$. Assume that both $k$ and $p$ are unknown and use the method of moments to obtain point estimators of both parameters. This somewhat unusual application of the binomial model has
+been used to estimate crime rates for crimes that are known to have many unreported
+occurrences. For such a crime, both the true reporting rate, $p$, and the total number
+of occurrences, $k$, are unknown. Equating the first two sample moments to those of the population yields the system
+of equations
+\[
+  \bar X=kp
+  \quad\text{and}\quad
+  \frac1n\sum_{i=1}^nX_i^2=kp(1-p)+k^2p^2,
+\]
+where $\bar X$ is the sample mean. Solving for $k$ and $p$ leads to
+\[
+  \hat k=\frac{\bar X^2}{\bar X-(1/n)\sum_{i=1}^n(X_i-\bar X)^2}
+  \quad\text{and}\quad
+  \hat p=\frac{\bar X}{\hat k}.
+\]
+It is difficult to analyze the performance of $\hat k$ and $\hat p$ analytically so you are asked to perform a simulation study using `R`. The idea is to generate random samples and investigate the performance of $\hat k$ and $\hat p$ using random samples.
+
+1. Generate a single simple random sample of length `n <- 50` from the binomial distribution with the parameters `k <- 10`, `p <- 0.4` (1 point).
+
+```{r}
+x<-rbinom(50, 10, 0.4)
+x
+```
+
+
+2. Write a function that takes a sample as its input and returns the estimates of `k` and `p` given above (3 points).
+
+```{r}
+func<-function(x){
+  n=length(x)
+  x.mean=mean(x)
+  total_cha=sapply(x, function(x){
+    return((x-x.mean)^2)
+  })
+  k=(x.mean)^2/(x.mean-(1/n)*sum(total_cha))
+  
+  p=x.mean/k
+  return(c(k,p))
+}
+
+
+
+```
+
+
+3. Generate `N <- 1000` samples of size `n <- 50` (as in the first question) and calculate `N <- 1000` estimates of $k$ and `N <- 1000` estimates of $p$ (6 points if no loops are used in the code, 2 points if any loop (`for`, `while`, `repeat`, etc.) is used in the code ).
+
+```{r}
+x1<-sapply(c(1:1000), function(x){
+  x=rbinom(50, 10, 0.4)
+})
+
+es1<-apply(x1, 2, func)
+
+k1<-es1[1,]
+p1<-es1[2,]
+```
+
+
+4. Repeat Question 3 when `n <- 100` and when `n <- 250` (2 points).
+
+`n <- 100`
+
+```{r}
+x2<-sapply(c(1:1000), function(x){
+  x=rbinom(100, 10, 0.4)
+})
+
+es2<-apply(x2, 2, func)
+
+k2<-es2[1,]
+p2<-es2[2,]
+
+
+```
+
+`n <- 250`
+
+```{r}
+x3<-sapply(c(1:1000), function(x){
+  x=rbinom(250, 10, 0.4)
+})
+
+es3<-apply(x3, 2, func)
+
+k3<-es3[1,]
+p3<-es3[2,]
+```
+
+
+5. Estimate the bias and the mean squared error (MSE) of $\hat k$ and the bias and the MSE of $\hat p$ for each sample size (`n <- 50`, `n <- 100` and `n <- 250`). Do the estimators seem to overestimate or underestimate the parameters? How do the bias and the MSE change when the sample size increases? (4 points).
+
+`n <- 50`
+
+```{r}
+bias1<-mean(k1)-10
+mse1<-mean( (10 - mean(k1))^2)
+
+bias1
+
+mse1
+```
+
+`n <- 100`
+
+```{r}
+bias2<-mean(k2)-10
+mse2<-mean( (10 - mean(k2))^2)
+
+bias2
+
+mse2
+```
+
+`n <- 100`
+
+```{r}
+
+bias3<-mean(k3)-10
+mse3<-mean( (10 - mean(k3))^2)
+
+bias3
+
+mse3
+```
+
+
+The estimators seem to overestimate  the parameters. The bias and the MSE change smaller when the sample size increases.
+
+
+6.
+
+  a. Make a single plot using `ggplot2` that contains three box plots of the estimates of the parameter `k` when `n <- 50`, `n <- 100`, `n <- 250` (the first from the left box plot has to describe the estimates when `n <- 50`, the second from the left box plot has to describe the estimates when `n <- 100` and the third from the left box plot has to describe the estimates `n <- 250`). Include the true value of the parameter as a horizontal line (`geom_hline()` and use the argument `color`) and label the plot appropriately (6 points).
+  
+```{r}
+library(ggplot2)
+
+data_plot<-data.frame(
+  size=c(rep(c("n=50","n=100","n=250"),each=1000)),
+  k=c(k1,k2,k3)
+)
+data_plot$size<-factor(data_plot$size,levels = c(c("n=50","n=100","n=250")))
+ggplot(data=data_plot, aes(x=size,y=k))+geom_boxplot(aes(fill=size))+
+  geom_hline(yintercept = 10,color="red")
+```
+  
+  
+  
+  
+  
+  
+  b. $\hat k$ can obtain values that are far away from the true value of the parameter when the sample size is small and the box plots might not be particularly informative in such a situation. Remove the estimates from the plot that are outside of the interval $[0,50]$ so that the box plots are more informative (4 points).
+  
+  
+```{r,warning=FALSE}
+ggplot(data=data_plot, aes(x=size,y=k))+geom_boxplot(aes(fill=size))+
+  geom_hline(yintercept = 10,color="red")+
+  ylim(c(0,50))
+```
+  
+  c. Make the same plot with three box plots for the estimates of the parameter `p` (b part does not apply here) (2 points).
+  
+```{r}
+data_plot2<-data.frame(
+  size=c(rep(c("n=50","n=100","n=250"),each=1000)),
+  p=c(p1,p2,p3)
+)
+data_plot2$size<-factor(data_plot2$size,levels = c(c("n=50","n=100","n=250")))
+ggplot(data=data_plot2, aes(x=size,y=p))+geom_boxplot(aes(fill=size))+
+  geom_hline(yintercept = 0.4,color="red")
+```
+  
+  d. Describe how both of these plots change when the sample size increases (2 points).
+  
+ When the sample size increases, box line diagram box becomes more and more flat.
+  
+
+  
+  
+  
+  
+  
+  
+  
+  
+  

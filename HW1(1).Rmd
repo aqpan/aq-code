@@ -1,0 +1,92 @@
+---
+title: "STA 104 HW1---Anqi Pan"
+output: pdf_document
+
+install.packages("coin")
+
+# Q1
+X=c(64,72,73,79,80,81,84,89,90,92,95,98)
+B= sum (X>= 74)
+n=length(X)
+sig = sqrt(n*p*(1-p))
+Zs = (B - n*0.50)/sqrt(0.25*n)
+p.value = pnorm(Zs,lower.tail= FALSE)
+
+```
+
+# Q2
+install.packages("devtools", dependencies = TRUE)
+devtools::has_devel()
+devtools::install_github('alanarnholt/BSDA')
+?SIGN.test
+the.CI = SIGN.test(X, md = 74, alternative = "two.sided",conf.level = 0.95)
+the.CI.greater=SIGN.test(X, md = 74, alternative = "two.sided",conf.level = 0.90) 
+the.CI.less = SIGN.test(X, md = 74, alternative = "two.sided",conf.level = 0.95) 
+the.CI$Confidence.Intervals
+
+n=12
+0.5*n-qnorm(1-0.1/2)*sqrt(0.25*n)   
+0.5*n+qnorm(1-0.1/2)*sqrt(0.25*n)+1
+
+n=12
+0.5*n-qnorm(1-0.05/2)*sqrt(0.25*n)   
+0.5*n+qnorm(1-0.05/2)*sqrt(0.25*n)+1 
+
+```
+
+# Q4
+chicken <- read_csv("C:/Users/richa/Desktop/chicken.csv")
+x= chicken
+B= sum (x!=4)
+n = length(X)
+Zs = (B - n*0.50)/sqrt(0.25*n)
+p.value.two.sided = 2*pnorm(abs(Zs),lower.tail= FALSE)
+
+
+# Q5
+alpha = 0.10
+Za = round(qnorm(1-alpha/2),digits = 3)
+LB_percentile = -Za*sqrt(0.25*n)+0.50*n
+UB_percentile= Za*sqrt(0.25*n)+0.50*n+1
+
+?SIGN.test
+SIGN.test(x1, md = 4, alternative = "two.sided",conf.level = 0.90)
+
+
+# Question 6
+library(xtable)
+salary <- read_csv("C:/Users/richa/Desktop/salary.csv")
+
+# a
+X = salary
+X = sort(X)
+CDF = cumsum(table(X))/length(X) 
+FX = as.numeric(CDF) 
+X = as.numeric(names(CDF)) 
+n=30
+alpha = 0.05
+all.lower.bounds= FX -qnorm(1-alpha/2)*sqrt(FX*(1-FX)/n)
+all.upper.bounds = FX +qnorm(1-alpha/2)*sqrt(FX*(1-FX)/n)
+all.CI = cbind(all.lower.bounds,all.upper.bounds)
+rownames(all.CI) = X
+all.CI
+
+# b
+P = 0.1
+z_1 = 1.96
+LB= -1.96*sqrt(0.1*0.9*30)+30*0.1
+UB = 1+1.96*sqrt(0.1*0.9*30)+30*0.1
+# c
+alpha = 0.1
+all.lower.bounds  = FX -qnorm(1-alpha/2)*sqrt(FX*(1-FX)/n)
+all.upper.bounds  = FX +qnorm(1-alpha/2)*sqrt(FX*(1-FX)/n)
+all.CI = cbind(all.lower.bounds,all.upper.bounds)
+rownames(all.CI) = X
+all.CI
+# d
+P2 = 0.9
+z2 = 1.645
+LB2 = -1.645*sqrt(0.1*0.9*30)+30*0.9 
+UB2= 1+1.645*sqrt(0.1*0.9*30)+30*0.9
+
+

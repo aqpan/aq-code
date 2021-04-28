@@ -1,0 +1,236 @@
+---
+title: 'STA 141A Spring 2020: Homework 3'
+author: 'Anqi Pan'
+date: "5/12/2020"
+output:
+  html_document:
+    number_sections: no
+---
+
+# Multiple linear regression
+
+1. Run the following code to create the vectors $x1$, $x2$, and $y$.
+```{r eval = TRUE}
+set.seed(1)
+n <- 100
+x1 <- runif(n)
+x2 <- runif(n, 10, 20)
+y <- 2 + 2 * x1 + 0.3 * x2 + rnorm(n)
+```
+a. (2 pts) The last line of the code above corresponds to creating a linear model in which $y$ is a function of $x1$ and $x2$. Write out the form of the linear model. What are the values of the regression coefficients $\beta_0$, $\beta_1$ and $\beta_2$? What is the value of $\sigma^2$?
+
+\textbf{Answer:}
+\newline
+  The form of the linear model is $y = \beta_0 + \beta_1 * x_1,..., \beta_n * x_n$.
+  The $\beta_0$ is 2.
+  The $\beta_1$ is 2. 
+  The $\beta_2$ is 0.3. 
+  The value of $\sigma^2$ is `r sum(y - mean(y))^2/(length(y)-1)`
+
+b. (2 pts) What is the correlation coefficient between $x1$ and $x2$? Create a scatter plot using `ggplot2` displaying the relationship between the variables $x1$ and $x2$.
+
+\textbf{Answer:}
+  The correlation coefficient between $x1$ and $x2$ is `r cor(x1, x2)`, this value seems $x1$ and $x2$ has no strong relationship. The scatterplot of $x1$ and $x2$ is as bellows.
+```{r, fig.align='c'}
+plot(x1, x2)
+```
+
+c. (4 pts) Fit a least squares regression to predict $y$ using $x1$ and $x2$. Describe the obtained results. What are the values of $\hat\beta_0$, $\hat\beta_1$ and $\hat\beta_2$? How do these relate to the true values of $\beta_0$, $\beta_1$ and $\beta_2$? What is the value of $s$ and how does it relate to the true value of $\sigma^2$? Can you reject the null hypothesis $H_0:\beta_1=0$? How about the null hypothesis $H_0:\beta_2=0$?
+
+\textbf{Answer:}
+  The least squares regression to predict $y$ using $x1$ and $x2$ is as bellows. 
+```{r}
+fit1 <- lm(y ~ x1 + x2)
+summary(fit1)
+```
+  
+  The values of $\hat\beta_0$, $\hat\beta_1$ and $\hat\beta_2$ are `r summary(fit1)$coeff[1, 1]` and `r summary(fit1)$coeff[2, 1]` and `r summary(fit1)$coeff[3, 1]`. These values are very close to the true values.
+  
+```{r}
+y_hat <- summary(fit1)$coeff[1, 1] + summary(fit1)$coeff[2, 1] * x1 + summary(fit1)$coeff[3, 1] * x2
+var.y_hat <- sum(y_hat - mean(y_hat))^2/(length(y_hat)-1)
+var.y <- sum(y - mean(y)) ^ 2 / (length(y) - 1)
+var.y_hat == var.y
+```
+  The value of $s$ is `r sqrt(var.y_hat)`, this value is not equal to the true value of $\sigma^2$.
+  
+  I can't reject the null hypothesis $H_0:\beta_1=0$ and the null hypothesis $H_0:\beta_2=0$ as the p-value of $\beta_1$ and $\beta_2$ are less than 0.05 which means they are significant at the model.
+  
+d. (3 pts) Now fit a least squares regression to predict $y$ using only $x1$. Comment on your results. What are the values of $\hat\beta_0$ and $\hat\beta_1$? How do these relate to the true values of $\beta_0$ and $\beta_1$? What is the value of $s$ and how does it relate to the true value of $\sigma^2$? Can you reject the null hypothesis $H_0:\beta_1=0$?
+
+\textbf{Answer:}
+  The least squares regression to predict $y$ using $x1$ is as bellows. The $\beta_0$ and $\beta_1$ are significant at the model and the $\beta_1$ is close to the true values but the $\beta_0$ is bigger than the true values.
+```{r}
+fit2 <- lm(y ~ x1)
+summary(fit2)
+```
+  
+  The values of $\hat\beta_0$, $\hat\beta_1$ are `r summary(fit2)$coeff[1, 1]` and `r summary(fit2)$coeff[2, 1]`. The $\beta_1$ is close to the true values but the $\beta_0$ is bigger than the true values.
+  
+```{r}
+y_hat <- summary(fit2)$coeff[1, 1] + summary(fit2)$coeff[2, 1] * x1
+var.y_hat <- sum(y_hat - mean(y_hat)) ^ 2 / (length(y_hat) - 1)
+var.y_hat == var.y
+```
+  The value of $s$ is `r sqrt(var.y_hat)`, this value is not equal to the true value of $\sigma^2$.
+  
+  I can't reject the null hypothesis $H_0:\beta_1=0$ as the p-value of $\beta_1$ is less than 0.05 which means it's significant at the model.
+  
+e. (3 pts) Now fit a least squares regression to predict $y$ using only $x2$. Comment on your results. What are the values of $\hat\beta_0$ and $\hat\beta_2$? How do these relate to the true values of $\beta_0$ and $\beta_2$? What is the value of $s$ and does it relate to the true value of $\sigma^2$? Can you reject the null hypothesis $H_0:\beta_2=0$?
+
+\textbf{Answer:}
+  The least squares regression to predict $y$ using $x2$ is as bellows. The $\beta_0$ and $\beta_2$ are significant at the model and the $\beta_2$ is close to the true values but the $\beta_0$ is a little bigger than the true values.
+```{r}
+fit3 <- lm(y ~ x2)
+summary(fit3)
+```
+  
+  The values of $\hat\beta_0$, $\hat\beta_2$ are `r summary(fit3)$coeff[1, 1]` and  `r summary(fit3)$coeff[2, 1]`. The $\beta_2$ is close to the true values but the $\beta_0$ is a little bigger than the true values.
+  
+```{r}
+y_hat <- summary(fit3)$coeff[1, 1] + summary(fit3)$coeff[2, 1] * x2
+var.y_hat <- sum(y_hat - mean(y_hat)) ^ 2 / (length(y_hat) - 1)
+var.y_hat == var.y
+```
+  The value of $s$ is `r sqrt(var.y_hat)`, this value is not equal to the true value of $\sigma^2$.
+  
+  I can't reject the null hypothesis $H_0:\beta_2=0$ as the p-value of $\beta_2$ is less than 0.05 which means it's significant at the model.
+
+2. Run the following code to create the vectors $x1$, $x2$, and $y$.
+```{r eval = FALSE}
+set.seed(1)
+n <- 100
+x1 <- runif(n)
+x2 <- 0.5 * x1 + rnorm(n, 0, .01)
+y <- 2 + 2 * x1 + 0.3 * x2 + rnorm(n)
+```
+
+a) (8 pts) Repeat parts b, c, d, and e of Exercise 1 using the new vectors $x1$, $x2$ and $y$. What differences do you see between Exercise 1 and Exercise 2? Explain why these differences occur.
+
+\textbf{Answer:}
+  The correlation coefficient between $x1$ and $x2$ is `r cor(x1, x2)`, this value seems $x1$ and $x2$ has a strong relationship. The scatterplot of $x1$ and $x2$ is as bellows.
+```{r, fig.align='c'}
+plot(x1, x2)
+```
+
+  The least squares regression to predict $y$ using $x1$ and $x2$ is as bellows. 
+```{r}
+fit1 <- lm(y ~ x1 + x2)
+summary(fit1)
+```
+  
+  The values of $\hat\beta_0$, $\hat\beta_1$ and $\hat\beta_2$ are `r summary(fit1)$coeff[1, 1]` and `r summary(fit1)$coeff[2, 1]` and `r summary(fit1)$coeff[3, 1]`. These values are different with the true values exclude the $\hat\beta_0$ which is close to true value.
+  
+```{r}
+y_hat <- summary(fit1)$coeff[1, 1] + summary(fit1)$coeff[2, 1] * x1 + summary(fit1)$coeff[3, 1] * x2
+var.y <- sum(y - mean(y)) ^ 2 / (length(y) - 1)
+var.y_hat <- sum(y_hat - mean(y_hat))^2/(length(y_hat)-1)
+var.y_hat == var.y
+```
+  The value of $s$ is `r sqrt(var.y_hat)`, this value is not equal to the true value of $\sigma^2$.
+  
+  I can accept the null hypothesis $H_0:\beta_1=0$ and the null hypothesis $H_0:\beta_2=0$ as the p-value of $\beta_1$ and $\beta_2$ are bigger than 0.05 which means they are not  significant at the model.
+  
+\textbf{Answer:}
+  The least squares regression to predict $y$ using $x1$ is as bellows. The $\beta_0$ and $\beta_1$ are significant at the model and the $\beta_1$ is close to the true values but the $\beta_0$ is bigger than the true values.
+```{r}
+fit2 <- lm(y ~ x1)
+summary(fit2)
+```
+  
+  The values of $\hat\beta_0$, $\hat\beta_1$ are `r summary(fit2)$coeff[1, 1]` and `r summary(fit2)$coeff[2, 1]`. The $\beta_0$ and $\beta_1$ are close to the true values.
+  
+```{r}
+y_hat <- summary(fit2)$coeff[1, 1] + summary(fit2)$coeff[2, 1] * x1
+var.y_hat <- sum(y_hat - mean(y_hat)) ^ 2 / (length(y_hat) - 1)
+var.y <- sum(y - mean(y))^2/(length(y)-1)
+var.y_hat == var.y
+```
+  The value of $s$ is `r sqrt(var.y_hat)`, this value is not equal to the true value of $\sigma^2$.
+  
+  I can't reject the null hypothesis $H_0:\beta_1=0$ as the p-value of $\beta_1$ is less than 0.05 which means it's significant at the model.
+
+\textbf{Answer:}
+  The least squares regression to predict $y$ using $x2$ is as bellows. The $\beta_0$ and $\beta_2$ are significant at the model and the $\beta_2$ is close to the true values but the $\beta_0$ is a little bigger than the true values.
+```{r}
+fit3 <- lm(y ~ x2)
+summary(fit3)
+```
+  
+  The values of $\hat\beta_0$, $\hat\beta_2$ are `r summary(fit3)$coeff[1, 1]` and `r summary(fit3)$coeff[2, 1]`. The $\beta_0$ is close to the true values but the $\beta_2$ is a little bigger than the true values.
+  
+```{r}
+y_hat <- summary(fit3)$coeff[1, 1] + summary(fit3)$coeff[2, 1] * x2
+var.y_hat <- sum(y_hat - mean(y_hat)) ^ 2 / (length(y_hat) - 1)
+var.y <- sum(y - mean(y)) ^ 2 / (length(y) - 1)
+var.y_hat == var.y
+```
+  The value of $s$ is `r sqrt(var.y_hat)`, this value is not equal to the true value of $\sigma^2$.
+  
+  I can't reject the null hypothesis $H_0:\beta_2=0$ as the p-value of $\beta_2$ is less than 0.05 which means it's significant at the model.
+
+3. Use $x1$, $x2$ and $y$ from Exercise 2 and suppose that we obtain one additional observation, which was unfortunately mismeasured.
+```{r eval = FALSE}
+x1 <- c(x1, 0.1)
+x2 <- c(x2, 0.8)
+y <- c(y, 6)
+```
+a) (8 pts) Re-fit the linear models from parts c, d and e of Exercise 1 using this new data. What effect does this new observation have on the each of the models? In each model, is this observation an outlier? A high-leverage point? Both? Explain your answers.
+
+\textbf{Answer:}
+\newline
+  The result belwo shows that point 82 is an outlier but the new point 102 is not.
+```{r}
+fit1 <- lm(y ~ x1 + x2)
+library(car)
+outlierTest(fit1)
+```
+
+  The result shows the new point 102 is a high-leverage point from the plot below.
+```{r}
+hat.plot <- function(fit) {  
+              p <- length(coefficients(fit)) 
+              n <- length(fitted(fit)) 
+              plot(hatvalues(fit), main="Index Plot of Hat Values") 
+              abline(h=c(2,3)*p/n, col="red", lty=2) 
+              identify(1:n, hatvalues(fit), names(hatvalues(fit))) 
+            } 
+hat.plot(fit1) 
+```
+  
+  The result belwo shows that point 101 is an outlier but the new point 102 is not.
+```{r}
+fit2 <- lm(y ~ x1)
+library(car)
+outlierTest(fit2)
+```
+  
+  The result shows the new point 102 is not a high-leverage point from the plot below.
+```{r}
+hat.plot <- function(fit) {  
+              p <- length(coefficients(fit)) 
+              n <- length(fitted(fit)) 
+              plot(hatvalues(fit), main="Index Plot of Hat Values") 
+              abline(h=c(2,3)*p/n, col="red", lty=2) 
+              identify(1:n, hatvalues(fit), names(hatvalues(fit))) 
+            } 
+hat.plot(fit2) 
+```
+  
+  The result belwo shows that point 82 is an outlier but the new point 102 is not.
+```{r}
+fit3 <- lm(y ~ x2)
+library(car)
+outlierTest(fit3)
+```
+  
+  The result shows the new point 102 is a high-leverage point from the plot below.
+```{r}
+hat.plot <- function(fit) {  
+              p <- length(coefficients(fit)) 
+              n <- length(fitted(fit)) 
+              plot(hatvalues(fit), main="Index Plot of Hat Values") 
+              abline(h=c(2,3)*p/n, col="red", lty=2) 
+              identify(1:n, hatvalues(fit), names(hatvalues(fit))) 
+            } 
+hat.plot(fit3) 

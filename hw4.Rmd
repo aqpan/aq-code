@@ -1,0 +1,202 @@
+---
+title: 'STA 141A Spring 2020: Homework 4'
+author: 'Anqi Pan'
+date: "5/25/2020"
+output:
+  html_document:
+    number_sections: no
+---
+
+
+
+The assignment has to be done in an [R Markdown](https://rmarkdown.rstudio.com) document and submitted electronically on Canvas until the deadline of May 27, 2020 at 6:00 PM by uploading two files:
+
+1. an HTML or PDF file;
+2. the Rmd source file.
+
+It is possible to upload two files on Canvas. Late submissions will not be accepted.
+
+Each answer has to be based on `R` code that shows how the result was obtained. `R` code has to answer the question or solve the task. No points will be given for answers that are not based on `R` code. 
+
+The total number of points of this assignment is 30.
+
+Good luck!
+
+
+
+
+# Classification
+
+The goal of this homework assignment is to compare the  $k$-NN classifier, linear discriminant analysis (LDA) and the logistic model in a binary classification problem. 
+
+1. Consider Fisher's `iris` data set. Extract the data corresponding to the flower types  `versicolor` and `virginica`, numbering a total of `100` flowers. Set aside the first `10` observations for each flower type as test data and use the remaining data consisting of `80` observations (with flower types as class labels) as training data (1.5 points).
+
+
+```{r}
+#load data
+data("iris")
+
+#Extract the data corresponding to the flower types versicolor and virginica
+all.data1<-iris[iris$Species=="versicolor",]
+all.data2<-iris[iris$Species=="virginica",]
+all.data1$Species<-as.character(all.data1$Species)
+all.data2$Species<-as.character(all.data2$Species)
+
+#test data
+test.data1<-all.data1[1:10,]
+test.data2<-all.data2[1:10,]
+test.data<-rbind(test.data1,test.data2)
+
+#training data
+training.data1<-all.data1[11:50,]
+training.data2<-all.data2[11:50,]
+training.data<-rbind(training.data1,training.data2)
+```
+
+<p></p>
+
+2. Use LDA for classifying the test data. Use `Sepal.Length` and `Sepal.Width` as the predictor variables (or features)  (1.5 points).
+
+```{r}
+#Use LDA for classifying the test data
+library(MASS)
+lda.fit<-lda(Species~Sepal.Length+Sepal.Width,data=training.data)
+lda_pred<-predict(lda.fit,test.data)
+```
+
+    a) Report the class-specific means of the predictor variables for the training data (1.5 points).
+    
+```{r}
+#the means of the Sepal.Length variables for the training data
+tapply(training.data$Sepal.Length,training.data$Species,mean)
+#the means of the Sepal.Width variables for the training data
+tapply(training.data$Sepal.Width,training.data$Species,mean)
+```
+
+    
+    b) Compute the confusion matrix for the test data and the misclassification error rate (1.5 points).
+    
+```{r}
+#the confusion matrix for the test data
+cm<-table(test.data$Species,lda_pred$class,dnn = c("True","Predicted"))
+cm
+#misclassification error rate
+1-sum(diag(cm))/sum(cm)
+```
+    
+    
+    
+<p></p>
+
+3. Use the logistic model, fitted to the training data, to classify the test data.
+    a) Fit a logistic model to the training data, using the variables `Sepal.Length` and `Sepal.Width` as predictors (3 points).
+    
+```{r}
+#Fit a logistic model to the training data
+logreg<-glm(as.factor(Species)~Sepal.Length+Sepal.Width, data = training.data, family = binomial)
+```
+    
+    
+        i. Obtain the estimates and their standard errors for the model parameters (1.5 points).
+        
+```{r}
+#Obtain the estimates
+summary(logreg)$coefficients[,1]
+#Obtain their standard errors
+summary(logreg)$coefficients[,2]
+```
+        
+        
+        ii. Compute the confusion matrix for the test data and the misclassification error rate (1.5 points).
+        
+```{r}
+#Compute the confusion matrix for the test data
+cm.glm<-table(ifelse(predict(logreg,test.data,type="response")<.5,"versicolor","virginica"),
+      factor(test.data$Species),dnn = c("Predicted species","True species"))
+cm.glm
+#misclassification error rate
+1-sum(diag(cm))/sum(cm)
+```
+        
+        iii. Are both of the predictor variables necessary for the purpose of 
+classification? Explain your answer (3 points).
+
+
+```{r}
+#Obtain their P values
+summary(logreg)$coefficients[,4]
+```
+
+There are not both of the predictor variables necessary for the purpose of classification. The predictor variable Sepal.Width can be discarded, because the P value of the predictor variable Sepal.Width in logistic regression is 0.418801, which is much greater than 0.05, which shows that the predictor variable Sepal.Width has no significant effect on the model.
+
+    b) Fit a logistic regression model to the training data, using the variable `Sepal.Length` as a one-dimensional predictor (3 points).
+    
+```{r}
+#Fit a logistic model to the training data
+logreg2<-glm(as.factor(Species)~Sepal.Length, data = training.data, family = binomial)
+```
+    
+        i. Obtain the estimates and their standard errors for the model parameters (1.5 points).
+        
+```{r}
+#Obtain the estimates
+summary(logreg2)$coefficients[,1]
+#Obtain their standard errors
+summary(logreg2)$coefficients[,2]
+```
+        
+        ii. Compute the confusion matrix for the test data, and the misclassification error rate (1.5 points).
+        
+```{r}
+#Compute the confusion matrix for the test data
+cm.glm<-table(ifelse(predict(logreg2,test.data,type="response")<.5,"versicolor","virginica"),factor(test.data$Species),dnn = c("Predicted species","True species"))
+cm.glm
+#misclassification error rate
+1-sum(diag(cm))/sum(cm)
+```
+        
+        iii. Compare the results with those in 3(a). Does your result in 3(b)(ii) support the answer to 3(a)(iii) (3 points)?
+        
+        Compare the results with those in 3 (a), we can see that the results in 3(b)(ii) of the confusion matrix and misclassification error rate are same as 3(a)(ii), which shows that the predictor Sepal.Width can not be added to the model, which support the answer to 3 (a)(iii).
+        
+<p></p>
+
+4. Use the $k$-nearest neighbors ($k$-NN) classification method to classify the test data, using only `Sepal.Length` as the predictor variable. Perform this analysis using $k=1$ and $k=5$. In each case, compute the confusion matrix for the test data, and the misclassification error rate (3 points).
+
+```{r}
+library(class)
+#For k=1
+pre.test1 <- knn(data.frame(Sepal.Length=training.data$Sepal.Length),
+                data.frame(Sepal.Length=test.data$Sepal.Length),
+                training.data[,5],
+                k=1)
+#compute the confusion matrix
+c.knn1<-table(pre.test1,test.data$Species,dnn = c("Predicted species","True species"))
+c.knn1
+#misclassification error rate
+1-sum(diag(c.knn1))/sum(c.knn1)
+
+#For k=5
+pre.test2 <- knn(data.frame(Sepal.Length=training.data$Sepal.Length),
+                data.frame(Sepal.Length=test.data$Sepal.Length),
+                training.data[,5],
+                k=5)
+#compute the confusion matrix
+c.knn2<-table(pre.test2,test.data$Species,dnn = c("Predicted species","True species"))
+c.knn2
+#misclassification error rate
+1-sum(diag(c.knn2))/sum(c.knn2)
+
+```
+
+
+<p></p>
+
+5. Write a very brief summary (maximum of `100` words) about the comparative performance of the three different classification methods for this data set (3 points).
+
+    For this data set, the LDA and the logistic regression model have the same misclassification error rate on the test set, and the k-NN model misclassification error rate when k = 1 It is smaller than other models, which means that the k-NN model is better in terms of model accuracy. Logistic regression can more clearly show the relationship between predictors and class labels. And from the output results of the confusion matrix of the three models, we can see that the prediction accuracy of the three models for the variety of `versicolor` is worse than that of` virginica`.
+
+
+
+
+
